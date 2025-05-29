@@ -359,6 +359,9 @@ for (i in 1:num_ssn){
       #browseURL(html_fl) #open the map in a web browser
     }
     
+    st_agr(polygon_sf) = "constant"
+    st_agr(nereid_tracks) = "constant"
+    
     # intersect grid with survey trackline (linestring), 
     # calculate and store trackline length in each grid cell
     intersection <- st_intersection(polygon_sf, nereid_tracks) %>%
