@@ -1,0 +1,128 @@
+---
+title: "BOF-SPUE"
+author: "DEP"
+format: html
+editor: visual
+---
+
+## Compute sightings per unit effort for the Bay of Fundy
+
+Utilize only R/V Nereid surveys.
+
+Choose the designated conservation area, or a larger polygon
+
+## R Libraries
+
+```{r}
+## LOAD LIBRARIES
+library(tidyverse)
+library(sf)
+library(dplyr)
+library(webshot) #needed to save maps. on new systems, may have to do: webshot::install_phantomjs()
+library(mapview) #needed to make maps
+library(tmap)
+library(googledrive)
+```
+
+Set current directory
+
+```{r}
+curr_dir <- dirname(rstudioapi::getSourceEditorContext()$path)
+setwd(curr_dir)
+```
+
+Filter by years and months
+
+```{r}
+begYEAR = 2010 
+endYEAR = 2020
+
+begMONTH = 8
+endMONTH = 9
+```
+
+Define 'seasons'. Calculations of SPUE will be done within these time blocks, within each year
+
+```{r}
+ssn_beg=rbind(c(8,1))
+ssn_end=rbind(c(9,30))
+```
+
+if data file is not found locally in /data/, download the data from your googledrive
+
+```{r}
+
+#file_loc = "~/Documents/WorkDocuments/Projects/Fundy/Dan & Kelsey All FUNDY data 05-19-2023.CSV"
+file_loc = paste0(curr_dir, "/data/", "Copy of Dan & Kelsey All FUNDY data 05-19-2023.CSV")
+if (!file.exists(file_loc)){ #if file already exists, this statement will not be 
+  
+  is_googledrive_available <- require("googledrive") #logial variable indicating if the package is installed
+  
+  # install googledrive if necessary
+  if (is_googledrive_available == FALSE){
+    install.packages("googledrive")
+  }
+  
+  #download the file
+  library("googledrive")
+  setwd(paste0(curr_dir, "/data/"))
+  drive_download("Copy of Dan & Kelsey All FUNDY data 05-19-2023.CSV")
+  setwd(curr_dir)  
+}
+
+```
+
+## import data
+
+```{r}
+dat <- read_csv(file = file_loc, 
+                col_types = cols(FILEID = col_character(),
+                                 EVENTNO = col_double(),
+                                 MONTH = col_double(),
+                                 DAY = col_double(),
+                                 YEAR = col_double(),
+                                 GMT = col_double(),
+                                 LATITUDE = col_double(),
+                                 LONGITUDE = col_double(),
+                                 LEGTYPE = col_double(),
+                                 LEGSTAGE = col_double(),
+                                 ALT = col_double(),
+                                 HEADING = col_double(),
+                                 WX = col_character(),
+                                 CLOUD = col_double(),
+                                 VISIBLTY = col_double(),
+                                 BEAUFORT = col_double(),
+                                 SPECCODE = col_character(),
+                                 IDREL = col_double(),
+                                 NUMBER = col_double(),
+                                 CONFIDNC = col_double())
+)
+```
+
+Restrict data use only to the R/V Nereid
+
+```{r}
+dat <- dat %>% filter(PLATFORM == 99)
+```
+
+# discard opportunistic surveys
+
+```{r}
+dat <- dat %>% mutate(fileid = str_sub(FILEID, start = 1, end = 1)) %>% filter(fileid == "P" | fileid == "p") %>% dplyr::select(-fileid)
+```
+
+Convert timezones: GMT to ET and add columns for datetime and jday in ET
+
+```{r}
+source('padstr0.R')
+
+dat$date_ymd_gmt <- as.Date(with(dat,paste(YEAR,MONTH,DAY,sep="-")),"%Y-%m-%d")
+GMT_strings = padstr0(dat$GMT,6) #pad GMT times so they have 6 digits
+#correct instances where "200000" was stored as "02e+05"
+GMT_strings[which(GMT_strings == "02e+05")] = "200000"
+GMT_strings = paste(dat$date_ymd_gmt, GMT_strings) #append ymd to hms
+dat$datetime_GMT = ymd_hms(GMT_strings, tz = 'GMT') #convert
+dat$datetime_ET = with_tz(dat$datetime_GMT, "US/Eastern")
+dat$date_jday_ET = format(dat$datetime_ET,"%j") #calculate jday based on US/Eastern time
+rm(GMT_strings)
+```
