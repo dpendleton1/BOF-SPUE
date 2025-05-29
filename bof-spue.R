@@ -7,6 +7,7 @@ library(dplyr)
 library(webshot) #needed to save maps. on new systems, may have to do: webshot::install_phantomjs()
 library(mapview) #needed to make maps
 library(tmap)
+library(googledrive)
 
 #find current directory, setwd to current directory
 curr_dir <- dirname(rstudioapi::getSourceEditorContext()$path)
@@ -14,7 +15,7 @@ setwd(curr_dir)
 
 ## inputs
 #years
-begYEAR = 2000
+begYEAR = 2010
 endYEAR = 2020
 
 #months
@@ -176,16 +177,16 @@ rm(locs, locs_pts, locs_sfc) # clean up environment
 
 # define study area as a polygon
 # bof polygon from a file that i had on my computer
-polygon_matrix = cbind(
-  lon = c(-66.45, -66.28, -66.28, -66.37, -66.50, -66.62, -66.62, -66.45),
-  lat = c(44.82, 44.78, 44.67, 44.55, 44.48, 44.48, 44.70, 44.82)
-)
+# polygon_matrix = cbind(
+#   lon = c(-66.45, -66.28, -66.28, -66.37, -66.50, -66.62, -66.62, -66.45),
+#   lat = c(44.82, 44.78, 44.67, 44.55, 44.48, 44.48, 44.70, 44.82)
+# )
 
 # large box drawn by dan
-# polygon_matrix = cbind(
-#   lon = c(-67.2, -67.2, -65.7, -65.7, -67.2),
-#   lat = c( 44.1,  45.1,  45.1,  44.1,  44.1)
-# )
+polygon_matrix = cbind(
+  lon = c(-67.2, -67.2, -65.7, -65.7, -67.2),
+  lat = c( 44.1,  45.1,  45.1,  44.1,  44.1)
+)
 
 polygon_sfc = st_sfc(st_polygon(list(polygon_matrix))) #create sfc object
 st_crs(polygon_sfc) = "EPSG:4326" #insert crs
@@ -332,7 +333,7 @@ for (i in 1:num_ssn){
     #   st_cast("LINESTRING")
     
     nereid_tracks <- tmpdat_sf_season_survey %>% 
-      group_by(on.effort.id) %>% # this is not necessary since you are working with a tmpdat file that only has one FILEID
+      group_by(on.effort.id) %>% # on/off effort
       arrange(FILEID, EVENTNO) %>% # put it in order
       summarise(do_union = FALSE) %>%  #if you don't do this, it returns one row for each row of tmpdat_sf (your original thing)
       #st_geometry() %>% #this seems unnecessary
@@ -377,8 +378,8 @@ for (i in 1:num_ssn){
     
     # fill jday array. no need to loop about grid cells because jday is the same for every grid cell within each survey:
     #   jday should be the same for all grid cells within a survey, so fill all rows with jday value and NA-out grid cells not surveyed below
-    if (length(unique(tmpdat_sf_season_survey$date_jday)) == 1){
-      jday[,j+2] = as.numeric(unique(tmpdat_sf_season_survey$date_jday))
+    if (length(unique(tmpdat_sf_season_survey$date_jday_ET)) == 1){
+      jday[,j+2] = as.numeric(unique(tmpdat_sf_season_survey$date_jday_ET))
     } else {
       #jday[,j+2] = -99 #there should only be one value of DAY
       print('>1 jday. STOP!')
