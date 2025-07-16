@@ -159,7 +159,8 @@ rm(keep.cols)
 #write.csv(dat, file = "dat_with_dist.csv")
 #write.csv(tmpdat, file = "tmpdat.csv")
 
-make_figs = 'no' #'yes' 
+#make_figs = 'no'  
+make_figs = 'yes'  
 
 ## ADD GEOMETRY TO DATASET AND MAKE INTO SF OBJECT
 #matrix of lat and long
