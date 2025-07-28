@@ -15,7 +15,7 @@ setwd(curr_dir)
 
 ## inputs
 #years
-begYEAR = 2010
+begYEAR = 1987
 endYEAR = 2020
 
 #months
@@ -99,7 +99,7 @@ dat$DAY_ET <- as.numeric(format(dat$datetime_ET,"%d"))
 dat <- dat %>%
   filter(YEAR_ET >= begYEAR & YEAR_ET <= endYEAR)
 dat <- dat %>%
-  filter(MONTH_ET == begMONTH | MONTH_ET == endMONTH)
+  filter(MONTH_ET >= begMONTH | MONTH_ET <= endMONTH)
 
 # create seasons matrix
 source('makeSeasons.R')
