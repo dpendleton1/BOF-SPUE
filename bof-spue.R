@@ -15,8 +15,8 @@ setwd(curr_dir)
 
 ## inputs
 #years
-begYEAR = 2005
-endYEAR = 2010
+begYEAR = 1987
+endYEAR = 2020
 
 #months
 begMONTH = 8
@@ -159,8 +159,8 @@ rm(keep.cols)
 #write.csv(dat, file = "dat_with_dist.csv")
 #write.csv(tmpdat, file = "tmpdat.csv")
 
-#make_figs = 'no'  
-make_figs = 'yes'  
+make_figs = 'no'  
+#make_figs = 'yes'  
 
 ## ADD GEOMETRY TO DATASET AND MAKE INTO SF OBJECT
 #matrix of lat and long
@@ -541,8 +541,11 @@ colSums(effort3d[1,-1,], na.rm = T)
 SPUE = colSums(RIWH3d[1,-1,], na.rm = T)/(colSums(effort3d[1,-1,], na.rm = T)/1000)
 
 ts = data.frame(
-  year = c(begYEAR:endYEAR),
+  #year = c(begYEAR:endYEAR),
+  season_id = paste0(season$Y, "_", season$JDAY_BEG), #create column that identifies the year and julian day starting each season
   spue = SPUE
 )
-plot(ts)
-lines(ts)
+#plot(ts)
+#lines(ts)
+
+
