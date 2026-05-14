@@ -15,16 +15,16 @@ setwd(curr_dir)
 
 ## inputs
 #years
-begYEAR = 1987
-endYEAR = 2020
+begYEAR = 2005
+endYEAR = 2010
 
 #months
 begMONTH = 8
 endMONTH = 9
 
 #season
-ssn_beg=rbind(c(8,1))
-ssn_end=rbind(c(9,30))
+ssn_beg=rbind(c(8,1), c(9,1))
+ssn_end=rbind(c(8,31),c(9,30))
 
 # if necessary, download the data
 #file_loc = "~/Documents/WorkDocuments/Projects/Fundy/Dan & Kelsey All FUNDY data 05-19-2023.CSV"
@@ -184,9 +184,15 @@ rm(locs, locs_pts, locs_sfc) # clean up environment
 # )
 
 # large box drawn by dan
+# polygon_matrix = cbind(
+#   lon = c(-67.2, -67.2, -65.7, -65.7, -67.2),
+#   lat = c( 44.1,  45.1,  45.1,  44.1,  44.1)
+# )
+
+# Cameron's PT polygon
 polygon_matrix = cbind(
-  lon = c(-67.2, -67.2, -65.7, -65.7, -67.2),
-  lat = c( 44.1,  45.1,  45.1,  44.1,  44.1)
+  lon = c(-66.93052074,-67.05610867,-67.05690206,-67.02699447,-66.98845844,-66.88988618,-66.80360596,-66.56769676,-66.5702911,-66.50293859,-66.4511891,-66.38475143,-66.37482644,-66.33505355,-66.33415327,-66.3657701,-66.55870207,-66.66182848,-66.86406142,-66.88838383,-66.93052074),
+  lat = c(43.86450893,43.88786635,43.98545,44.1852296,44.22331928,44.29440231,44.35047832,44.69739439,44.74093913,44.77014828,44.794444,44.7771749,44.72904873,44.58444116,44.47937684,44.37737574,44.26208414,44.21463709,44.00813597,43.96422514,43.86450893)
 )
 
 polygon_sfc = st_sfc(st_polygon(list(polygon_matrix))) #create sfc object
