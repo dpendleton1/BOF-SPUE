@@ -359,15 +359,31 @@ for (i in 1:num_ssn){
         system(cmd)
       }
       
-      #create the survey map
+      # #create the survey map
+      # survey_map = mapview(nereid_tracks, color = "red", lwd = 4, alpha = 1, popup = NULL) +
+      #   mapview(tmpdat_sf_season_survey, color = "blue", cex = 2, alpha = .2, popup = NULL) +
+      #   mapview(polygon_sf)
+      # survey_map  #plot the survey map
+      # #write and view map as html file
+      # html_fl = paste0(curr_dir, "/figs/", unique(tmpdat_sf_season$YEAR), "_ssn", i, "_surv", j, "_", season_ufids[j], ".html")
+      # mapshot(survey_map, url = html_fl) #save the map
+      # #browseURL(html_fl) #open the map in a web browser
+
+      sightings <- tmpdat_sf_season_survey |> filter(!is.na(SPECCODE))
       survey_map = mapview(nereid_tracks, color = "red", lwd = 4, alpha = 1, popup = NULL) +
         mapview(tmpdat_sf_season_survey, color = "blue", cex = 2, alpha = .2, popup = NULL) +
+        mapview(
+          sightings,
+          zcol = "SPECCODE",
+          cex = 5, #sightings$NUMBER*5,
+          layer.name = "Species" #,
+          #popup = popupTable(sightings, zcol = c("SPECCODE", "NUMBER")
+          ) +
         mapview(polygon_sf)
-      survey_map  #plot the survey map
+      survey_map
       #write and view map as html file
       html_fl = paste0(curr_dir, "/figs/", unique(tmpdat_sf_season$YEAR), "_ssn", i, "_surv", j, "_", season_ufids[j], ".html")
       mapshot(survey_map, url = html_fl) #save the map
-      #browseURL(html_fl) #open the map in a web browser
     }
     
     st_agr(polygon_sf) = "constant"
@@ -500,12 +516,13 @@ for (i in 1:num_ssn){
         cmd = paste0('mkdir ', curr_dir, "/figs")
         system(cmd)
       }
-      
-      #create the survey map
-      survey_map = mapview(nereid_tracks, color = "red", lwd = 4, alpha = 1, popup = NULL) +
-        mapview(tmpdat_sf_season_survey, color = "blue", cex = 2, alpha = .2, popup = NULL) +
-        mapview(polygon_sf)
-      survey_map  #plot the survey map
+
+      # #create the survey map
+      # survey_map = mapview(nereid_tracks, color = "red", lwd = 4, alpha = 1, popup = NULL) +
+      #   mapview(tmpdat_sf_season_survey, color = "blue", cex = 2, alpha = .2, popup = NULL) +
+      #   mapview(polygon_sf)
+      # survey_map  #plot the survey map
+
       #write and view map as html file
       html_fl = paste0(curr_dir, "/figs/", unique(tmpdat_sf_season$YEAR), "_ssn", i, "_surv", j, "_", season_ufids[j], ".html")
       mapshot(survey_map, url = html_fl) #save the map
