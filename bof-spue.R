@@ -15,8 +15,8 @@ setwd(curr_dir)
 
 ## inputs
 #years
-begYEAR = 1987
-endYEAR = 2020
+begYEAR = 2010
+endYEAR = 2010
 
 #months
 begMONTH = 8
@@ -159,8 +159,8 @@ rm(keep.cols)
 #write.csv(dat, file = "dat_with_dist.csv")
 #write.csv(tmpdat, file = "tmpdat.csv")
 
-make_figs = 'no'  
-#make_figs = 'yes'  
+#make_figs = 'no'  
+make_figs = 'yes'  
 
 ## ADD GEOMETRY TO DATASET AND MAKE INTO SF OBJECT
 #matrix of lat and long
@@ -224,7 +224,11 @@ tmpdat_sf <- tmpdat_sf %>%
 
 #create the survey map
 survey_map = mapview(tracks, color = "red", lwd = 4, alpha = 1, popup = NULL) +
-  #mapview(tmpdat_sf, color = "blue", cex = 2, alpha = .2, popup = NULL) +
+
+  #plots every point in the dataset, which is a lot, so maybe not the best idea. but it is useful for checking that the points are where they should be and that the CRS is correct. if you have a smaller dataset, you could plot this.
+  #mapview(tmpdat_sf, color = "blue", cex = 2, alpha = .2, popup = NULL) + 
+
+  #plot the polygon on top of the tracks and points to check that it is in the right place and has the right CRS
   mapview(polygon_sf)
 survey_map  #plot the survey map
 
@@ -296,6 +300,148 @@ bft3d = spp3d
 ## FILL DETECTION COVARAIATE LIST OBJECTS AND 3D ARRAYS
 #loop about season [i], then loop about survey [j], the loop about grid cell
 for (i in 1:num_ssn){
+  
+  # isolate season
+  tmpdat_sf_season = tmpdat_sf |> filter(season == i)
+  
+  # find unique FILEIDs within the season[i]. each unique FILEID is a survey
+  season_ufids = unique(tmpdat_sf_season$FILEID)
+  num_season_ufids = length(season_ufids)
+  
+  # initialize temporary spatial arrays needed for intersecting within the loop about surveys/ufids
+  effort = polygon_sf
+  jday = polygon_sf
+  bft = polygon_sf
+  
+  # fill out columns to the maximum number of surveys
+  # add two columns at the beginning to accommodate geometry and grid_id columns
+  effort[,3:(max_survs+2)] = NA
+  jday[,3:(max_survs+2)] = NA  
+  bft[,3:(max_survs+2)] = NA
+  
+  #loop about individual surveys (FILEID) to obtain effort, jday, bft in each cell/polygon
+  for (j in 1:num_season_ufids){
+    
+    # filter tmpdat_sf_season for each fileid/survey. store as tmpdat_sf_season_survey
+    # after this, 'tmpdat_sf_season_survey' has all records from season[i] and season_ufids[j] (season_ufids = survey) 
+    cmd = paste("tmpdat_sf_season_survey = tmpdat_sf_season |> filter(FILEID == '", season_ufids[j], "')", sep = "")
+    print(cmd)
+    eval(parse(text = cmd))
+    
+    # intersect tmpdat_sf_season_survey with the grid, return tmpdat_sf_season_survey_grid  
+    # after this, 'tmpdat_sf_season_survey_grid' holds indices for each grid cell, within season[i] and survey[j]
+    # the indices returned are used to compute mean/mode/etc of beaufort sea state within each cell
+    tmpdat_sf_season_survey_grid = st_intersects(polygon_sf, tmpdat_sf_season_survey)
+
+    # calculate effort using linestrings
+    # this chunk of code converts rows of tmpdat_sf_season_survey into a linestring, 
+    # but within each fileid. the result is an sfc object
+    # nereid_tracks <- tmpdat_sf_season_survey %>% 
+    #   #group_by(FILEID) %>% # this is not necessary since you are working with a tmpdat file that only has one FILEID
+    #   arrange(FILEID, EVENTNO) %>% # put it in order
+    #   summarise(do_union = FALSE) %>%  #if you don't do this, it returns one row for each row of tmpdat_sf (your original thing)
+    #   #st_geometry() %>% #this seems unnecessary
+    #   st_cast("LINESTRING")
+    
+    nereid_tracks <- tmpdat_sf_season_survey %>% 
+      group_by(on.effort.id) %>% # on/off effort
+      arrange(FILEID, EVENTNO) %>% # put it in order
+      summarise(do_union = FALSE) %>%  #if you don't do this, it returns one row for each row of tmpdat_sf (your original thing)
+      #st_geometry() %>% #this seems unnecessary
+      st_cast("MULTILINESTRING")
+    
+    # create figures, if 'make_figs' flag is set to 'yes'
+    if (make_figs == 'yes'){
+    
+      # if /figs does not exist, create it
+      if (!file.exists(paste0(curr_dir, "/figs"))){
+        cmd = paste0('mkdir ', curr_dir, "/figs")
+        system(cmd)
+      }
+      
+      #create the survey map
+      survey_map = mapview(nereid_tracks, color = "red", lwd = 4, alpha = 1, popup = NULL) +
+        mapview(tmpdat_sf_season_survey, color = "blue", cex = 2, alpha = .2, popup = NULL) +
+        mapview(polygon_sf)
+      survey_map  #plot the survey map
+      #write and view map as html file
+      html_fl = paste0(curr_dir, "/figs/", unique(tmpdat_sf_season$YEAR), "_ssn", i, "_surv", j, "_", season_ufids[j], ".html")
+      mapshot(survey_map, url = html_fl) #save the map
+      #browseURL(html_fl) #open the map in a web browser
+    }
+    
+    st_agr(polygon_sf) = "constant"
+    st_agr(nereid_tracks) = "constant"
+    
+    # intersect grid with survey trackline (linestring), 
+    # calculate and store trackline length in each grid cell
+    intersection <- st_intersection(polygon_sf, nereid_tracks) %>%
+      mutate(total_length = st_length(.)) %>%
+      mutate(total_length_km = as.numeric(total_length)*0.001) %>% #changes length from [m] to <dbl> and converts from meters to kilometers
+      group_by(grid_id)
+    # plot(intersection$polygon_sfc)
+    
+    # join the 'intersection' with grid_id. this creates a matrix with the same order as all the others (e.g. 'effort').
+    effort_joined <- polygon_sf %>% 
+      left_join(st_drop_geometry(intersection), by = "grid_id")
+    
+    # below, we add lengths from effort_joined into effort
+    # store effort length from each grid cell into the column for survey j
+    effort[, j+2] = sum(effort_joined$total_length_km)
+    rm(effort_joined, intersection, nereid_tracks)
+    
+    # fill jday array. no need to loop about grid cells because jday is the same for every grid cell within each survey:
+    #   jday should be the same for all grid cells within a survey, so fill all rows with jday value and NA-out grid cells not surveyed below
+    if (length(unique(tmpdat_sf_season_survey$date_jday_ET)) == 1){
+      jday[,j+2] = as.numeric(unique(tmpdat_sf_season_survey$date_jday_ET))
+    } else {
+      #jday[,j+2] = -99 #there should only be one value of DAY
+      print('>1 jday. STOP!')
+      stop()
+    }
+    
+    # fill bft array. NA-out grid cells not surveyed (below)
+    for (k in 1:num_cells){
+      # compute mean of Beaufort values
+      bft[k,j+2] = mean(tmpdat_sf_season_survey$BEAUFORT[tmpdat_sf_season_survey_grid[[k]]], na.rm = T)
+    }
+    
+    rm(tmpdat_sf_season_survey_grid)
+  }
+  
+  #name columns in 2D detection covariates
+  names(effort)[3:(num_season_ufids+2)] = season_ufids
+  names(jday)[3:(num_season_ufids+2)] = season_ufids
+  names(bft)[3:(num_season_ufids+2)] = season_ufids
+  
+  # fill 3d effort matrix
+  cmd = paste("effort3d[,,", i, "] = as.matrix(st_drop_geometry(effort))", sep = "")
+  print(cmd)
+  eval(parse(text = cmd))
+  
+  # fill 3d jday matrix
+  cmd = paste("jday3d[,,", i, "] = as.matrix(st_drop_geometry(jday))", sep = "")
+  print(cmd)
+  eval(parse(text = cmd))
+  
+  # fill 3d bft matrix
+  cmd = paste("bft3d[,,", i, "] = as.matrix(st_drop_geometry(bft))", sep = "")
+  print(cmd)
+  eval(parse(text = cmd))
+  
+  ### # optional: produce lists for each detection variable
+  # # spatialize effort_list and jday_list, for uyear[i]
+  effort_list[[i]] = polygon_sf
+  jday_list[[i]] = polygon_sf
+  bft_list[[i]] = polygon_sf
+
+  effort_list[[i]] = effort
+  jday_list[[i]] = jday
+  bft_list[[i]] = bft
+  # ###
+  
+  #no longer need 2D versions of detection covariates, as they are stored in the '_list' & '3d' versions 
+  rm(effort, jday, bft)
   
   # isolate season
   tmpdat_sf_season = tmpdat_sf |> filter(season == i)
@@ -542,10 +688,10 @@ SPUE = colSums(RIWH3d[1,-1,], na.rm = T)/(colSums(effort3d[1,-1,], na.rm = T)/10
 
 ts = data.frame(
   #year = c(begYEAR:endYEAR),
-  season_id = paste0(season$Y, "_", season$JDAY_BEG), #create column that identifies the year and julian day starting each season
+  season_id = paste0(season$Y, "_", season$JDAY_BEG, "_", season$JDAY_END), #create column that identifies the year and julian day starting each season
   spue = SPUE
 )
 #plot(ts)
 #lines(ts)
 
-
+write_csv(ts, file = 'SPUE.csv')
