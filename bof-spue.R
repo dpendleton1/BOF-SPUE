@@ -15,16 +15,24 @@ setwd(curr_dir)
 
 ## inputs
 #years
-begYEAR = 2010
-endYEAR = 2010
+begYEAR = 2087
+endYEAR = 2020
 
 #months
 begMONTH = 8
 endMONTH = 9
 
-#season
-ssn_beg=rbind(c(8,1), c(9,1))
-ssn_end=rbind(c(8,31),c(9,30))
+#season monthly August and September
+# ssn_beg=rbind(c(8,1), c(9,1))
+# ssn_end=rbind(c(8,31),c(9,30))
+
+#season bi-monthly July - October
+# ssn_beg=rbind(c(7,1), c(7,16), c(8,1), c(8,16), c(9,1), c(9,16), c(10,1), c(10,16))
+# ssn_end=rbind(c(7,15), c(7,31), c(8,15), c(8,30), c(9,15), c(9,30), c(10,15), c(10,31))
+
+#season bi-monthly August - September
+ssn_beg=rbind(c(8,1), c(8,16), c(9,1), c(9,16))
+ssn_end=rbind(c(8,15), c(8,30), c(9,15), c(9,30))
 
 # if necessary, download the data
 #file_loc = "~/Documents/WorkDocuments/Projects/Fundy/Dan & Kelsey All FUNDY data 05-19-2023.CSV"
