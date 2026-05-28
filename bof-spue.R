@@ -15,24 +15,28 @@ setwd(curr_dir)
 
 ## inputs
 #years
-begYEAR = 2087
-endYEAR = 2020
+begYEAR = 1987
+endYEAR = 1987
 
 #months
-begMONTH = 8
-endMONTH = 9
+begMONTH = 7
+endMONTH = 10
 
 #season monthly August and September
-# ssn_beg=rbind(c(8,1), c(9,1))
-# ssn_end=rbind(c(8,31),c(9,30))
+ssn_beg=rbind(c(7,1), c(8,1), c(9,1), c(10,1))
+ssn_end=rbind(c(7,31),c(8,31), c(9,30), c(10,31))
 
 #season bi-monthly July - October
 # ssn_beg=rbind(c(7,1), c(7,16), c(8,1), c(8,16), c(9,1), c(9,16), c(10,1), c(10,16))
 # ssn_end=rbind(c(7,15), c(7,31), c(8,15), c(8,30), c(9,15), c(9,30), c(10,15), c(10,31))
 
 #season bi-monthly August - September
-ssn_beg=rbind(c(8,1), c(8,16), c(9,1), c(9,16))
-ssn_end=rbind(c(8,15), c(8,30), c(9,15), c(9,30))
+# ssn_beg=rbind(c(8,1), c(8,16), c(9,1), c(9,16))
+# ssn_end=rbind(c(8,15), c(8,30), c(9,15), c(9,30))
+
+# season two-week July - October
+# ssn_beg = rbind(c(7,1), c(7,15), c(7,29), c(8,12), c(8,26), c(9,9), c(9,23), c(10,7), c(10,21))
+# ssn_end = rbind(c(7,14), c(7,28), c(8,11), c(8,25), c(9,8), c(9,22), c(10,6), c(10,20), c(10,31))
 
 # if necessary, download the data
 #file_loc = "~/Documents/WorkDocuments/Projects/Fundy/Dan & Kelsey All FUNDY data 05-19-2023.CSV"
@@ -107,7 +111,7 @@ dat$DAY_ET <- as.numeric(format(dat$datetime_ET,"%d"))
 dat <- dat %>%
   filter(YEAR_ET >= begYEAR & YEAR_ET <= endYEAR)
 dat <- dat %>%
-  filter(MONTH_ET >= begMONTH | MONTH_ET <= endMONTH)
+  filter(MONTH_ET >= begMONTH & MONTH_ET <= endMONTH)
 
 # create seasons matrix
 source('makeSeasons.R')
@@ -212,6 +216,7 @@ mapview(polygon_sf)
 tracks <- tmpdat_sf %>% 
   group_by(FILEID, on.effort.id) %>% 
   arrange(FILEID, EVENTNO) %>% # put it in order
+  filter(n() >= 2) %>%          # drop groups with < 2 points
   summarise(do_union = FALSE) %>%  #if you don't do this, it returns one row for each row of tmpdat_sf (your original thing)
   #st_geometry() #%>% 
   st_cast("MULTILINESTRING")
@@ -312,8 +317,13 @@ for (i in 1:num_ssn){
   # isolate season
   tmpdat_sf_season = tmpdat_sf |> filter(season == i)
   
+  if (dim(tmpdat_sf_season)[1] == 0){
+    print(paste("season", i, "has no records. skipping to next season."))
+    next
+  }
+
   # find unique FILEIDs within the season[i]. each unique FILEID is a survey
-  season_ufids = unique(tmpdat_sf_season$FILEID)
+  season_ufids = unique(tmpdat_sf_season$FILEID); season_ufids
   num_season_ufids = length(season_ufids)
   
   # initialize temporary spatial arrays needed for intersecting within the loop about surveys/ufids
@@ -354,6 +364,7 @@ for (i in 1:num_ssn){
     nereid_tracks <- tmpdat_sf_season_survey %>% 
       group_by(on.effort.id) %>% # on/off effort
       arrange(FILEID, EVENTNO) %>% # put it in order
+      filter(n() >= 2) %>%          # drop groups with < 2 points
       summarise(do_union = FALSE) %>%  #if you don't do this, it returns one row for each row of tmpdat_sf (your original thing)
       #st_geometry() %>% #this seems unnecessary
       st_cast("MULTILINESTRING")
@@ -512,6 +523,7 @@ for (i in 1:num_ssn){
     nereid_tracks <- tmpdat_sf_season_survey %>% 
       group_by(on.effort.id) %>% # on/off effort
       arrange(FILEID, EVENTNO) %>% # put it in order
+      filter(n() >= 2) %>%          # drop groups with < 2 points
       summarise(do_union = FALSE) %>%  #if you don't do this, it returns one row for each row of tmpdat_sf (your original thing)
       #st_geometry() %>% #this seems unnecessary
       st_cast("MULTILINESTRING")
