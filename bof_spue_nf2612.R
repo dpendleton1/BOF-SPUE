@@ -291,7 +291,7 @@ survey_map <- mapview(
   #mapview(tmpdat_sf, color = "blue", cex = 2, alpha = .2, popup = NULL) +
 
   #plot the polygon on top of the tracks and points to check that it is in the right place and has the right CRS
-  mapview(polygon_sf)
+  mapview(polygon_sf, map.types = "OpenStreetMap")
 survey_map #plot the survey map
 
 # add grid ID to polygon_sf (there is only one grid cell, but there could be another later)
